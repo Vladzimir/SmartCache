@@ -1,5 +1,5 @@
 # SmartCache
-Opencart 2.3.* extended version of the anti-slam caching system
+Opencart 2.3.* extended version of the anti-slam (dogpile effect) caching system
 
 # Install
 Uload file to root folder\
