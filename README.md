@@ -1,4 +1,4 @@
-# SmarCache
+# SmartCache
 Opencart 2.3.* extended version of the anti-slam caching system
 
 # Install
