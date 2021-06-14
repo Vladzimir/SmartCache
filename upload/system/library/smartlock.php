@@ -3,6 +3,7 @@
 namespace Vladzimir;
 class SmartLock
 {
+    private $version = '0.1';
     private $locked = false;
     private $key = null;
     private $filename = null;

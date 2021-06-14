@@ -5,11 +5,25 @@ require_once DIR_SYSTEM . 'library' . DIRECTORY_SEPARATOR . 'smartlock.php';
 
 class SmartCache
 {
-    public $expire;
-    public $lockTime = 5;
+    private $version = '0.2';
+    private $expire;
+    private $lockTime = 5;
     private $tmpExt = '.tmp';
     private $ext = '.cache';
     private $path = null;
+    private $expireByPrefix = [
+        'language' => 86400,
+        'currency' => 86400,
+        'store' => 86400,
+        'tax_class' => 604800,
+        'weight_class' => 604800,
+        'zone' => 604800,
+        'order_status' => 86400,
+        'category' => 7200,
+        'product' => 7200,
+        'information' => 10800,
+        'seo_pro' => 604800,
+    ];
 
     public function __construct($expire = 3600)
     {
@@ -36,7 +50,7 @@ class SmartCache
     {
         $file = $this->getFileName($key);
 
-        if (!$this->isValid($file)) {
+        if (!$this->isValid($file, $key)) {
             if (\Vladzimir\SmartLock::instance($key)->lock()) {
                 //Cache expired and lock success
                 return false;
@@ -77,9 +91,20 @@ class SmartCache
         $tmp = $this->path . uniqid('', true) . '.' . basename($key) . $this->tmpExt;
         $new = $this->getFileName($key);
 
-        //Atomic write data
-        file_put_contents($tmp, json_encode($value), LOCK_EX);
-        rename($tmp, $new);
+        //Atomic data recording
+        file_put_contents($tmp, json_encode($value, JSON_UNESCAPED_UNICODE), LOCK_EX);
+        if (!rename($tmp, $new)) {
+            try {
+                if (!unlink($tmp)) {
+                    clearstatcache(false, $tmp);
+                }
+                if (!unlink($new)) {
+                    clearstatcache(false, $new);
+                }
+            } catch (\Exception $e) {
+                //echo $e->getMessage();
+            }
+        }
         \Vladzimir\SmartLock::instance($key)->unlock();
     }
 
@@ -90,8 +115,14 @@ class SmartCache
 
         if ($files) {
             foreach ($files as $file) {
-                if (!@unlink($file)) {
-                    clearstatcache(false, $file);
+                if (is_file($file)) {
+                    try {
+                        if (!unlink($file)) {
+                            clearstatcache(false, $file);
+                        }
+                    } catch (\Exception $e) {
+                        //echo $e->getMessage();
+                    }
                 }
             }
         }
@@ -106,20 +137,41 @@ class SmartCache
         }
     }
 
-    private function isValid($file)
+    private function isValid($file, $key)
     {
         if (!$this->isExists($file)) {
             return false;
         }
 
-        if ((filemtime($file) + $this->expire) < time()) {
+        try {
+            $fileTime = filemtime($file);
+            if (!$fileTime) {
+                return false;
+            }
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        if (($fileTime + $this->getExpire($key)) < time()) {
             return false;
         }
 
         return true;
     }
 
-    public function getFileName($key, $pattern = false)
+    private function getExpire($key)
+    {
+        $arr = explode('.', $key);
+        $prefix = $arr[0];
+        if (isset($this->expireByPrefix[$prefix])) {
+            return $this->expireByPrefix[$prefix];
+        } else {
+            return $this->expire;
+        }
+
+    }
+
+    private function getFileName($key, $pattern = false)
     {
         $baseName = basename($key);
         $end = $this->ext;
