@@ -54,8 +54,7 @@ class SmartCache
             if (\Vladzimir\SmartLock::instance($key)->lock()) {
                 //Cache expired and lock success
                 return false;
-            } else {
-                \Vladzimir\SmartLock::instance($key)->lock($this->lockTime);
+            } elseif(\Vladzimir\SmartLock::instance($key)->lock($this->lockTime)) {
                 //Waiting locking
                 \Vladzimir\SmartLock::instance($key)->unlock();
                 //Unlock
