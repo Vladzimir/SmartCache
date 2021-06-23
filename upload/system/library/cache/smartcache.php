@@ -5,7 +5,7 @@ require_once DIR_SYSTEM . 'library' . DIRECTORY_SEPARATOR . 'smartlock.php';
 
 class SmartCache
 {
-    private $version = '0.2';
+    private $version = '0.3';
     private $expire;
     private $lockTime = 5;
     private $tmpExt = '.tmp';
@@ -54,11 +54,11 @@ class SmartCache
             if (\Vladzimir\SmartLock::instance($key)->lock()) {
                 //Cache expired and lock success
                 return false;
-            } elseif (!$this->isExists($file)) {
-                if (!\Vladzimir\SmartLock::instance($key)->lock($this->lockTime)) {
-                    //File cache not exist and lock false
-                    return false;
-                }
+            } else {
+                \Vladzimir\SmartLock::instance($key)->lock($this->lockTime);
+                //Waiting locking
+                \Vladzimir\SmartLock::instance($key)->unlock();
+                //Unlock
             }
         }
         return $this->getData($file);
