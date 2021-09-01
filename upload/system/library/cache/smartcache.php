@@ -5,12 +5,13 @@ require_once DIR_SYSTEM . 'library' . DIRECTORY_SEPARATOR . 'smartlock.php';
 
 class SmartCache
 {
-    private $version = '0.3';
+    private $version = '0.4';
     private $expire;
     private $lockTime = 5;
     private $tmpExt = '.tmp';
     private $ext = '.cache';
     private $path = null;
+    private $delta = 60;
     private $expireByPrefix = [
         'language' => 86400,
         'currency' => 86400,
@@ -54,7 +55,7 @@ class SmartCache
             if (\Vladzimir\SmartLock::instance($key)->lock()) {
                 //Cache expired and lock success
                 return false;
-            } elseif(\Vladzimir\SmartLock::instance($key)->lock($this->lockTime)) {
+            } elseif (\Vladzimir\SmartLock::instance($key)->lock($this->lockTime)) {
                 //Waiting locking
                 \Vladzimir\SmartLock::instance($key)->unlock();
                 //Unlock
@@ -163,11 +164,10 @@ class SmartCache
         $arr = explode('.', $key);
         $prefix = $arr[0];
         if (isset($this->expireByPrefix[$prefix])) {
-            return $this->expireByPrefix[$prefix];
+            return $this->expireByPrefix[$prefix] + rand(0, $this->delta);
         } else {
-            return $this->expire;
+            return $this->expire + rand(0, $this->delta);
         }
-
     }
 
     private function getFileName($key, $pattern = false)
